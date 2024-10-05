@@ -1,0 +1,12 @@
+fastapi[all]
+PyJWT
+cffi
+pyparser
+uvicorn[standard]
+rsa
+sqlalchemy
+mysql-connector-python
+cryptography
+google-auth
+pytz
+bcrypt

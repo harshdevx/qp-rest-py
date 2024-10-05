@@ -1,0 +1,19 @@
+networks:
+  slim:
+
+services:
+  # security_opt:
+  #   - no-new-privileges
+  api:
+    build: 
+      context: ./
+      dockerfile: dockerfile  
+    container_name: "qp-rest"
+    env_file: ./.env
+    volumes:
+      - ./src/:/src/
+    command: uvicorn main:app --reload --workers 1 --host 0.0.0.0 --port 8080
+    ports:
+      - 8080:8080
+    networks:
+      - slim
