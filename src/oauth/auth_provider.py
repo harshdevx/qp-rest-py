@@ -1,93 +1,127 @@
 import hashlib
-from ..db import engine
-from ..errors import error_library
+from db import DB
+from errors.error_library import ErrorLib
 from ..auth_handler import AuthHandler
 
 authHandler = AuthHandler()
 
-#GOOGLE AUTH PROVIDER
-async def getTokens(payload) -> dict: 
+# GOOGLE AUTH PROVIDER
+
+
+class AuthProvider():
+
+    def __init__(self):
+        self.__db = DB()
+        self.__errLib = ErrorLib()
+
+    async def getTokens(self, db_payload: dict) -> dict:
         status: bool = False
-        response_data1 = {'access_token': str, 'refresh_token': str}
-        if ((payload["signin_method"] == "google") or (payload["signin_method"] == "standard")):
-            email_hash: str = hashlib.sha1(payload['primary_email_id'].encode('utf-8')).hexdigest()
+        tokens = {'access_token': str, 'refresh_token': str}
+        if (db_payload.get('signin_method') == "google" or db_payload.get("signin_method" == "standard")):
+            email_hash: str = hashlib.sha1(
+                str(db_payload.get('primary_email_id')).encode('utf-8')).hexdigest()
 
-        raw_conn = engine.raw_connection()
-        cur1 = raw_conn.cursor(dictionary=True)
-        cur2 = raw_conn.cursor(dictionary=True)
-        cur1.callproc('sp_v3_get_user_from_fields', [None, email_hash, None, None])
-        for result in cur1.stored_results():
-            rs = result.fetchone()
-            
-        if rs:
+        self.__db('CALL sp_v3_get_user_from_fields(\
+                    %(user_uuid)s, \
+                    %(email_hash)s, \
+                    %(primary_mobile_number)s, \
+                    %(primary_email_id)s);',
+                  db_payload)
 
-            if (rs["IS_ACTIVE"] == "Y"):
-                to_encode = {"user_uuid" : rs["UUID"], "signin_method" : rs["SIGN_IN_METHOD"]}
+        rs_user_data = self.__db.fetchone()
+
+        if rs_user_data:
+
+            if (rs_user_data.get("ACTIVE") == "Y"):
+                to_encode = {"user_uuid": rs_user_data.get("UUID"),
+                             "signin_method": rs_user_data.get("SIGN_IN_METHOD")}
 
                 access_token = authHandler.createAccessToken(to_encode)
                 refresh_token = authHandler.createRefreshToken()
-                refresh_token_hash = hashlib.sha1(refresh_token.encode('utf-8')).hexdigest()
+                refresh_token_hash = hashlib.sha1(
+                    refresh_token.encode('utf-8')).hexdigest()
 
-                cur2.callproc('sp_v3_update_refresh_token', [email_hash, refresh_token_hash, None, payload['signin_method']])
-                
-                response_data1.update({'access_token': access_token, 'refresh_token': refresh_token})
+                update_db_payload: dict = {
+                    "email_hash": email_hash,
+                    "refresh_token": refresh_token_hash,
+                    "phone_hash": None,
+                    "signin_method": db_payload.get("signin_method")
+                }
+
+                self.__db.execute('CALL sp_v3_update_refresh_token(\
+                                %(email_hash)s, \
+                                %(refresh_token)s, \
+                                %(phone_hash)s, \
+                                %(signin_method)s', update_db_payload)
+
+                tokens.update(
+                    {'access_token': access_token, 'refresh_token': refresh_token})
 
                 status = True
-            elif(rs["IS_ACTIVE"] == "N"):
-                response_data2 = error_library.error_lib["auth"]["AUTH-106"]
-                status = False    
+            elif (rs_user_data.get("IS_ACTIVE") == "N"):
+
+                error_message = self.__errLib.getAuth106()
+                status = False
 
         else:
-            response_data2 = error_library.error_lib["auth"]["AUTH-105"]
+            error_message = self.__errLib.getAuth105()
             status = False
-
-        raw_conn.close()
 
         if (status):
-            return response_data1
+            return tokens
         else:
-            return response_data2
+            return error_message
 
-#CUSTOM REFRESH TOKEN CHECK
-async def renewTokens(payload):
+    # CUSTOM REFRESH TOKEN CHECK
 
-    status: bool = False
-    response_data1 = {'access_token': str, 'refresh_token': str}
-    
-    if(authHandler.verifyToken(payload['refresh_token'])):
+    async def renewTokens(self, db_payload: dict):
 
-        refresh_token: str = payload['refresh_token']
-        refresh_token_hash = hashlib.sha1(refresh_token.encode('utf-8')).hexdigest()
+        status: bool = False
+        tokens = {'access_token': str, 'refresh_token': str}
 
-        raw_conn = engine.raw_connection()
-        cur = raw_conn.cursor(dictionary=True)
-        cur.callproc('sp_v2_get_user_app_sec_data', [payload['user_uuid']])
-        for result in cur.stored_results():
-            rs = result.fetchone()
+        if (authHandler.verifyToken(db_payload.get("refresh_token"))):
 
-        if (rs["REFRESH_TOKEN"] == refresh_token_hash):
+            refresh_token: str = db_payload.get("refresh_token")
+            refresh_token_hash = hashlib.sha1(
+                refresh_token.encode('utf-8')).hexdigest()
 
-            to_encode = {"user_uuid" : payload['user_uuid'], "signin_method" : rs["SIGN_IN_METHOD"]}
-            access_token = authHandler.createAccessToken(to_encode)
-            refresh_token = authHandler.createRefreshToken()
-            refresh_token_hash = hashlib.sha1(refresh_token.encode('utf-8')).hexdigest()
+            self.__db.execute(
+                'CALL sp_v2_get_user_app_sec_data(%(user_uuid)s)', db_payload)
+            user_data = self.__db.fetchone()
 
-            cur.callproc('sp_v3_update_refresh_token', [rs["EMAIL_HASH"], refresh_token_hash, 
-                None, rs["SIGN_IN_METHOD"]])
-            
-            response_data1.update({'access_token': access_token, 'refresh_token': refresh_token})
-            
-            raw_conn.close()
-            
-            status = True
+            if (user_data.get(refresh_token) == refresh_token_hash):
+
+                to_encode = {
+                    "user_uuid": db_payload.get('user_uuid'), "signin_method": user_data.get("SIGN_IN_METHOD")}
+                access_token = authHandler.createAccessToken(to_encode)
+                refresh_token = authHandler.createRefreshToken()
+                refresh_token_hash = hashlib.sha1(
+                    refresh_token.encode('utf-8')).hexdigest()
+
+                update_db_payload: dict = {
+                    "email_hash": user_data.get("email_hash"),
+                    "refresh_token": refresh_token_hash,
+                    "phone_hash": None,
+                    "signin_method": user_data.get("signin_method")
+                }
+
+                self.__db.execute('CALL sp_v3_update_refresh_token(\
+                                %(email_hash)s, \
+                                %(refresh_token)s, \
+                                %(phone_hash)s, \
+                                %(signin_method)s', update_db_payload)
+
+                tokens.update(
+                    {'access_token': access_token, 'refresh_token': refresh_token})
+
+                status = True
+            else:
+
+                status = False
         else:
-           
-            response_data2 = error_library.error_lib["auth"]["AUTH-103"]
-            status = False
-    else:
-        response_data2 = None
+            return self.__errLib.getResourceNotFound()
 
-    if (status):
-        return response_data1
-    else:
-        return response_data2   
+        if (status):
+            return tokens
+        else:
+            return self.__errLib.getAuth103()

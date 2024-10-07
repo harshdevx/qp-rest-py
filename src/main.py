@@ -3,10 +3,10 @@ from starlette.middleware.cors import CORSMiddleware
 
 from users import userRoutes
 from oauth import oauthRoutes
-from groups import groupRoutes, groupInvitationRoutes, groupCountRoutes
-from domains import domainRoutes
-from devices import deviceRoutes
-from cities import citiesRoutes
+# from groups import groupRoutes, groupInvitationRoutes, groupCountRoutes
+# from domains import domainRoutes
+# from devices import deviceRoutes
+# from cities import citiesRoutes
 
 app = FastAPI()
 
@@ -25,13 +25,13 @@ def get_application():
         allow_headers=["*"],
     )
     app.include_router(oauthRoutes.router)
-    app.include_router(groupRoutes.router)
-    app.include_router(groupInvitationRoutes.router)
-    app.include_router(groupCountRoutes.router)
     app.include_router(userRoutes.router)
-    app.include_router(domainRoutes.router)
-    app.include_router(deviceRoutes.router)
-    app.include_router(citiesRoutes.router)
+    # app.include_router(groupRoutes.router)
+    # app.include_router(groupInvitationRoutes.router)
+    # app.include_router(groupCountRoutes.router)
+    # app.include_router(domainRoutes.router)
+    # app.include_router(deviceRoutes.router)
+    # app.include_router(citiesRoutes.router)
 
     return app
 

@@ -1,83 +1,114 @@
 import jwt
-import rsa
 import os
+import datetime
+import time
 from typing import Optional
 
 from fastapi import HTTPException, Security, status, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from datetime import datetime, timedelta
 
-from .config import settings
-from .utils import convertDateTime
+from utils import convertDateTime
+
 
 class AuthHandler():
     security = HTTPBearer()
 
+    def __init__(self) -> None:
+
+        self.__jwt_auth_key: str = f"{os.getcwd()}/{os.getenv('JWT_AUTH_KEY')}"
+        self.__jwt_pub_key: str = f"{os.getcwd()}/{os.getenv('JWT_AUTH_PUB')}"
+
     def createAccessToken(self, data: dict):
+
         to_encode = data.copy()
 
-        with open(settings.jwt_auth_key) as privatefile:
-            privkeydata = privatefile.read()
-        
-        #issue_at = convertDateTime(datetime.utcnow())
-        #expire_at = convertDateTime(datetime.utcnow() + timedelta(minutes=settings.jwt_access_token_expiry))
+        if (os.path.exists(self.__jwt_auth_key)):
+            with open(self.__jwt_auth_key) as privatefile:
+                privkeydata = privatefile.read()
 
-        exp = datetime.utcnow() + timedelta(days=0, minutes=settings.jwt_access_token_expiry)
-        iat = datetime.utcnow()
-                
-        to_encode.update({"iss": settings.jwt_issuer})
-        to_encode.update({"iat": iat})
-        to_encode.update({"exp": exp})
+            exp = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
+                days=0, hours=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRY')))
+            iat = datetime.datetime.now(tz=datetime.timezone.utc)
 
-        encoded_jwt = jwt.encode(to_encode, privkeydata, settings.jwt_algo)
+            to_encode.update({"iss": os.getenv('JWT_ISSUER')})
+            to_encode.update({"iat": iat})
+            to_encode.update({"exp": exp})
 
-        return encoded_jwt
-    
+            encoded_jwt = jwt.encode(
+                to_encode, privkeydata, os.getenv("JWT_ALGO"))
+
+            return encoded_jwt
+        else:
+            return None
+
     def createRefreshToken(self):
-        
-        to_encode: dict = {"iss": settings.jwt_issuer} 
 
-        with open(settings.jwt_auth_key) as privatefile:
-            privkeydata = privatefile.read()
-        
-        exp = datetime.utcnow() + timedelta(days=0, minutes=settings.jwt_access_token_expiry)
-        iat = datetime.utcnow()
-        
-        to_encode.update({"iat": iat})
-        to_encode.update({"exp": exp})
+        to_encode: dict = {"iss": os.getenv("JWT_ISSUER")}
+        if (os.path.exists(self.__jwt_auth_key)):
+            with open(self.__jwt_auth_key) as privatefile:
+                privkeydata = privatefile.read()
 
-        encoded_jwt = jwt.encode(to_encode, privkeydata, settings.jwt_algo)
+            exp = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
+                days=0, hours=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRY")))
+            iat = datetime.datetime.now(tz=datetime.timezone.utc)
 
-        return encoded_jwt
+            to_encode.update({"iat": iat})
+            to_encode.update({"exp": exp})
 
-    def decodeToken(self, token: str)-> Optional[Response]:
-        with open(settings.jwt_auth_pub) as pubfile:
-            pubfliedata = pubfile.read()
+            encoded_jwt = jwt.encode(
+                to_encode, privkeydata, os.getenv("JWT_ALGO"))
 
-        try:
-            idInfo = jwt.decode(token, pubfliedata, settings.jwt_algo)
-            return idInfo
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="token signature expired...")
-        except jwt.DecodeError:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="failed to decode token...")
-        except jwt.InvalidTokenError:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token...")
-        
+            return encoded_jwt
+        else:
+            return None
+
+    def decodeToken(self, token: str) -> Optional[Response]:
+        if (self.__jwt_pub_key):
+            with open(self.__jwt_pub_key) as pubfile:
+                pubfliedata = pubfile.read()
+
+            try:
+                idInfo = jwt.decode(token, pubfliedata, os.getenv("JWT_ALGO"))
+                return idInfo
+            except jwt.ExpiredSignatureError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="token signature expired")
+            except jwt.DecodeError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="failed to decode token")
+            except jwt.InvalidTokenError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
 
     def verifyToken(self, token: str) -> bool:
-        isTokenValid: bool = False
-        
-        idInfo = self.decodeToken(token)
-        now = datetime.utcnow()
-        exp = idInfo["exp"]
-        #exp = datetime.strptime(idInfo["exp_at"], "%Y-%m-%d %H:%M:%S")
+        try:
+            isTokenValid: bool = False
 
-        if (exp > now) and (idInfo["iss"] == settings.jwt_issuer):
-            isTokenValid = True
-        
-        return isTokenValid
-    
+            idInfo = self.decodeToken(token)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            unix_timestamp = time.mktime(now.timetuple())
+            exp = float(idInfo["exp"])
+
+            print(f"exp: {exp}")
+            print(f"now: {unix_timestamp}")
+            check = exp > unix_timestamp
+            print(f"condition check: {check}")
+            # exp = datetime.strptime(idInfo["exp"], "%Y-%m-%d %H:%M:%S")
+
+            if (exp > unix_timestamp) and (idInfo["iss"] == os.getenv("JWT_ISSUER")):
+                isTokenValid = True
+
+            return isTokenValid
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="token signature expired...")
+        except jwt.DecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="failed to decode token...")
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token...")
+
     def authenticatedUser(self, credentials: HTTPAuthorizationCredentials = Security(security)):
 
         idInfo = self.decodeToken(credentials.credentials)

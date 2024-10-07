@@ -1,35 +1,128 @@
+import error_msg_library
 
-error_lib: dict = {
-    "auth": {
-        "AUTH-101": {"code": "AUTH-101", "message": "invalid id token..."},
-        "AUTH-102": {"code": "AUTH-102", "message": "invalid access token..."},
-        "AUTH-103": {"code": "AUTH-103", "message": "invalid refresh token..."},
-        "AUTH-104": {"code": "AUTH-104", "message": "unauthorized access..."},
-        "AUTH-105": {"code": "AUTH-105", "request_code": "86c89e62af6f848e74829de2921b2199fa724d47", "message": "user registration required..."},
-        "AUTH-106": {"code": "AUTH-106", "request_code": "2c1e2b1daf8e75bbba55ee03e9b6e28c23686988", "message": "user activation required..."}
-    },
 
-    "common": {
-        "COMN-101": {"code": "COMN-101", "message": "invalid uuid format..."}
-    },
+class ErrorLib():
 
-    "user": {
-        "USER-101": {"code": "USER-101", "message": "bad request..."},
-        "USER-102": {"code": "USER-102", "message": "invalid full name..."}
-    
-    },
+    def __init__(self) -> None:
 
-    "device": {
-        "DEVICE-101": {"code": "DEVICE-101", "message": "device registered successfully..."},
-        "DEVICE-102": {"code": "DEVICE-102", "message": "device is already registered; un-register to proceed..."},
-        "DEVICE-103": {"code": "DEVICE-103", "message": "device is currently active; deactivate first to proceed..."},
-        "DEVICE-104": {"code": "DEVICE-104", "message": "only one ble device can be active..."},
-        "DEVICE-105": {"code": "DEVICE-105", "message": "device created successfully..."},
-        "DEVICE-106": {"code": "DEVICE-106", "message": "could not create device..."},
-        "DEVICE-107": {"code": "DEVICE-107", "message": "device activated..."},
-        "DEVICE-108": {"code": "DEVICE-108", "message": "could not activate device..."},
-        "DEVICE-109": {"code": "DEVICE-109", "message": "device deactivated..."},
-        "DEVICE-110": {"code": "DEVICE-110", "message": "could not deactivate device..."}
-    
-    }
-}
+        self.__errorMsg: dict = {}
+
+    def getNoRecords(self) -> dict:
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "no records"
+        })
+
+        return self.__errorMsg
+
+    def getUnauthorized(self) -> dict:
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "unauthorized request"
+        })
+
+        return self.__errorMsg
+
+    def getBadRequest(self) -> dict:
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "bad request either field value is wrong or technical error"
+        })
+
+        return self.__errorMsg
+
+    def getResourceCreated(self):
+        self.__errorMsg.update({
+            "code": 1,
+            "message": "resource created successfully"
+        })
+
+        return self.__errorMsg
+
+    def getResourceUpdated(self):
+        self.__errorMsg.update({
+            "code": 1,
+            "message": "resource updated successfully"
+        })
+
+        return self.__errorMsg
+
+    def getResourceError(self):
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "could not create resource"
+        })
+
+        return self.__errorMsg
+
+    def getResourceNotFound(self):
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "resource not found"
+        })
+
+        return self.__errorMsg
+
+    def getCouldNotAddRecord(self):
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "could not add record"
+        })
+
+        return self.__errorMsg
+
+    def getCouldNotEditRecord(self):
+        self.__errorMsg.update({
+            "code": 0,
+            "message": "could not update record"
+        })
+
+        return self.__errorMsg
+
+    def getSuccess(self):
+        self.__errorMsg.update({
+            "code": 1,
+            "message": "success"
+        })
+
+        return self.__errorMsg
+
+    def getTestData(self):
+        self.__errorMsg.update({
+            "code": 1,
+            "message": "test data used"
+        })
+
+        return self.__errorMsg
+
+    def getAuth103(self):
+        self.__errorMsg.update(
+            {
+                "code": "AUTH-103",
+                "message": "invalid refresh token..."
+            }
+        )
+
+        return self.__errorMsg
+
+    def getAuth105(self):
+        self.__errorMsg.update(
+            {
+                "code": "AUTH-105",
+                "request_code": "86c89e62af6f848e74829de2921b2199fa724d47",
+                "message": "user registration required..."
+            }
+        )
+
+        return self.__errorMsg
+
+    def getAuth106(self):
+        self.__errorMsg.update(
+            {
+                "code": "AUTH-106",
+                "request_code": "2c1e2b1daf8e75bbba55ee03e9b6e28c23686988",
+                "message": "user activation required..."
+            }
+        )
+
+        return self.__errorMsg

@@ -15,3 +15,4 @@ src/.env
 .env
 **/*.pem
 **/.env
+sqldb/db-test-data.sql
