@@ -25,7 +25,7 @@ async def findUser(searchUser: SearchUser, user_uuid: str = Depends(authHandler.
         'criteria': searchUser.criteria,
         'user_uuid': user_uuid
     }
-    processed_user_data = await userService.searchUser(searchPayload)
+    processed_user_data = await userService.search_user(searchPayload)
     return processed_user_data
 
 
@@ -62,7 +62,7 @@ async def createUser(createUser: CreateUser):
         if (createUser.signin_method == "google"):
             idInfo = id_token.verify_oauth2_token(
                 createUser.id_token, requests.Request(), os.getenv("G_CLIENT_ID"))
-            if ((idInfo['email_verified'] == True) and (idInfo['aud'] == settings.g_client_id)):
+            if ((idInfo['email_verified'] == True) and (idInfo['aud'] == os.getenv("G_CLIENT_ID"))):
                 user_payload.update({'primary_email_id': idInfo.get('email')})
 
                 email_hash = hashlib.sha1(idInfo.get(

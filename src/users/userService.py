@@ -2,6 +2,8 @@ from time import strftime
 import uuid
 
 from datetime import datetime
+
+from src.users.models import SearchUser
 from ..errors import error_msg_library
 
 from . import converter
@@ -68,19 +70,19 @@ class UserService():
         except Exception as e:
             print(f"get_user_uuid_from_email_hash: {e}")
 
-    async def search_user(self, db_payload: dict):
+    async def search_user(self, search_user: SearchUser):
         try:
-            if (db_payload.get("criteria") == "personal_data"):
+            if (search_user.criteria == "personal_data"):
                 self.__db(
-                    'CALL sp_v3_get_user_personal_data(%(user_uuid)s)', db_payload)
+                    'CALL sp_v3_get_user_personal_data(%(user_uuid)s)', search_user.user_uuid)
 
                 user_data = converter.convert_recordset_to_user_personal_data(
                     self.__db.fetchone())
 
                 return user_data
-            elif (db_payload.get("criteria") == "appsec_data"):
+            elif (search_user.criteria == "appsec_data"):
                 self.__db(
-                    'CALL sp_v3_get_user_appsec_data(%(user_uuid)s)', db_payload)
+                    'CALL sp_v3_get_user_appsec_data(%(user_uuid)s)', search_user.user_uuid)
 
                 user_data = converter.convert_recordset_to_user_personal_data(
                     self.__db.fetchone())

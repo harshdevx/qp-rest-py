@@ -1,11 +1,71 @@
 import re
-from pydantic import BaseModel, ValidationError, field_validator, Field
+from pydantic import BaseModel, field_validator, Field
 from typing import Optional
 
 from sqlalchemy import desc
 
 
+class UserFields(BaseModel):
+    user_uuid: str = Field(
+        default=None,
+        description="this field only accepts uuidv4 string")
+
+    @field_validator('user_uuid')
+    def match_user_uuid(cls, v):
+        matched = re.match(
+            "^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z", v)
+        if not (bool(matched)):
+            raise ValueError("this field only accepts uuidv4")
+        return v
+
+    email_hash: str = Field(
+        description="this field only accepts email hash"
+    )
+
+    def match_email_hash(cls, v):
+        matched = re.match("\b[0-9a-f]{5,40}\b")
+        if not (bool(matched)):
+            raise ValueError("this field accepts email hash")
+        return v
+
+    primary_mobile_number: str = Field(
+        default=None,
+        description="this field accepts phone number in format +11112221234"
+    )
+
+    def match_phone_number(cls, v):
+        matched = re.match("")
+        if not (bool(matched)):
+            raise ValueError(
+                "this field accepts mobile number in format +11112221234")
+        return v
+
+    email_id: str = Field(
+        description="this field only accepts email@domain.com format")
+
+    @field_validator('email_id')
+    def validate_email_id(cls, v):
+        matched = re.match(
+            "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", v)
+        if not (bool(matched)):
+            raise ValueError(
+                "this field can only accept values = email@domain")
+        return v
+
+
 class SearchUser(BaseModel):
+    user_uuid: str = Field(
+        default=None,
+        description="this field only accepts uuidv4 string")
+
+    @field_validator('user_uuid')
+    def match_user_uuid(cls, v):
+        matched = re.match(
+            "^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z", v)
+        if not (bool(matched)):
+            raise ValueError("this field only accepts uuidv4")
+        return v
+
     criteria: str = Field(
         description="this field can only accept values = google, firebase, apple or standard")
 
