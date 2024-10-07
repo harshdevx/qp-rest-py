@@ -12,7 +12,10 @@ services:
     env_file: ./.env
     volumes:
       - ./src/:/src/
-    command: uvicorn main:app --reload --workers 1 --host 0.0.0.0 --port 8080
+      - ./cert.pem:/root/cert.pem
+      - ./key.pem:/root/key.pem
+
+    command: uvicorn main:app --reload --workers 1 --host 0.0.0.0 --ssl-keyfile /root/key.pem --ssl-certfile /root/cert.pem --port 8080
     ports:
       - 8080:8080
     networks:
